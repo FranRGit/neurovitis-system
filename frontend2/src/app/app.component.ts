@@ -7,8 +7,8 @@ import { AnalyzerComponent } from './analyzer/analyzer.component';
   standalone: true,
   imports: [RouterOutlet, AnalyzerComponent],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.css'
 })
 export class AppComponent {
-  title = 'fuzzy-frontend';
+  title = 'frontend2';
 }
