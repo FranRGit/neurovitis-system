@@ -1,0 +1,120 @@
+<div class="neuro-container">
+
+    <header class="cyber-header">
+        <h1>NEURO<span class="neon-text">VITIS</span> SYSTEM</h1>
+        <div class="status-badge">SYSTEM: ONLINE</div>
+    </header>
+
+    <div class="main-grid">
+        
+        <div class="panel left-panel">
+        <h2><i class="fas fa-upload"></i> SCAN INPUT</h2>
+        
+        <div class="camera-container" *ngIf="isCameraOpen">
+            <video #videoElement autoplay></video>
+            <button class="btn btn-capture" (click)="captureImage()">CAPTURAR</button>
+        </div>
+
+        <div class="image-preview-box" *ngIf="!isCameraOpen">
+            <img *ngIf="imagePreview" [src]="imagePreview" alt="Leaf Preview" class="leaf-img">
+            <div *ngIf="!imagePreview" class="placeholder">
+            <i class="fas fa-microchip fa-3x"></i>
+            <p>NO DATA INPUT</p>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="file" #fileInput (change)="onFileSelected($event)" hidden accept="image/*">
+            <button class="btn btn-outline" (click)="fileInput.click()">SUBIR ARCHIVO</button>
+            <button class="btn btn-outline" (click)="toggleCamera()">{{ isCameraOpen ? 'CERRAR CÁMARA' : 'USAR CÁMARA' }}</button>
+        </div>
+
+        <button class="btn btn-primary analyze-btn" 
+                (click)="analyzeImage()" 
+                [disabled]="!selectedFile || isLoading">
+            {{ isLoading ? 'PROCESANDO...' : 'INICIAR ANÁLISIS NEURONAL' }}
+        </button>
+        </div>
+
+        <div class="panel right-panel">
+        <h2><i class="fas fa-chart-bar"></i> DIAGNOSTICS</h2>
+
+        <div *ngIf="!result" class="waiting-data">
+            <p>ESPERANDO DATOS DEL SENSOR...</p>
+        </div>
+
+        <div *ngIf="result" class="results-container fade-in">
+            <div class="diagnosis-card" [ngClass]="getAlertClass()">
+            <span class="label">CLASE DETECTADA:</span>
+            <h1 class="glitch-text">{{ result.diagnosis | uppercase }}</h1>
+            <div class="confidence-badge">
+                CONFIANZA: {{ result.confidence.toFixed(2) }}%
+            </div>
+            </div>
+
+            <div class="fuzzy-chart">
+            <h3>ANÁLISIS DIFUSO (FUZZY MEMBERSHIP)</h3>
+            <div class="bar-group" *ngFor="let item of getDetailsArray()">
+                <div class="bar-label">
+                <span>{{ item.name }}</span>
+                <span>{{ item.value.toFixed(1) }}%</span>
+                </div>
+                <div class="progress-track">
+                <div class="progress-fill" 
+                    [style.width.%]="item.value"
+                    [style.background-color]="getConfidenceColor(item.value)">
+                </div>
+                </div>
+            </div>
+            </div>
+
+            <div class="feedback-module">
+            <h3>VALIDACIÓN EXPERTA</h3>
+            
+            <div *ngIf="feedbackStatus === 'pending'" class="feedback-actions">
+                <button class="btn btn-success" (click)="approveDiagnosis()">
+                <i class="fas fa-check"></i> APROBAR
+                </button>
+                <button class="btn btn-danger" (click)="enableCorrection()">
+                <i class="fas fa-times"></i> CORREGIR
+                </button>
+            </div>
+
+            <div *ngIf="showCorrectionDropdown" class="correction-form fade-in">
+                <select [(ngModel)]="selectedCorrection" class="cyber-select">
+                <option value="" disabled selected>Seleccionar diagnóstico real...</option>
+                <option *ngFor="let disease of availableDiseases" [value]="disease">{{ disease }}</option>
+                </select>
+                <button class="btn btn-small" (click)="submitCorrection()">GUARDAR</button>
+            </div>
+
+            <div *ngIf="feedbackStatus !== 'pending'" class="feedback-done">
+                <p>ESTADO REGISTRADO: <span class="neon-text">{{ feedbackStatus | uppercase }}</span></p>
+            </div>
+            </div>
+
+        </div>
+        </div>
+    </div>
+
+    <div class="chat-widget" [class.open]="isChatOpen">
+        <div class="chat-header" (click)="toggleChat()">
+        <span><i class="fas fa-robot"></i> AGENTE AGRÓNOMO</span>
+        <i class="fas" [ngClass]="isChatOpen ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+        </div>
+        
+        <div class="chat-body" *ngIf="isChatOpen">
+        <div class="messages">
+            <div class="message" *ngFor="let msg of chatMessages" [ngClass]="msg.sender">
+            <div class="bubble">{{ msg.text }}</div>
+            <span class="time">{{ msg.time }}</span>
+            </div>
+        </div>
+        <div class="chat-input">
+            <input [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" placeholder="Consultar al agente...">
+            <button (click)="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+        </div>
+    </div>
+
+</div>

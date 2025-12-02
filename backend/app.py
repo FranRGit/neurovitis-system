@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
 from core.ai_logic import NeuroVitisSystem
 import os
-
+from flask_cors import CORS 
 app = Flask(__name__)
-
+CORS(app)
 # Configuración
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_PATH = os.path.join(BASE_DIR, 'models')
