@@ -9,3 +9,6 @@ scikit-fuzzy
 joblib
 pillow
 opencv-python
+supabase
+python-dotenv
+google-generativeai

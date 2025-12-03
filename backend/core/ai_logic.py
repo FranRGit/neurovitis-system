@@ -8,14 +8,12 @@ import skfuzzy as fuzz
 import os
 import cv2
 import base64
+import threading
 from PIL import Image
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.preprocessing import StandardScaler
 
-# IMPORTANTE: Asegúrate de que estos archivos existan en backend/core/
-from core import vision_logic
-from core import expert_system
-
+from core import vision_logic, expert_system, db_logic
 class FeatureExtractor(nn.Module):
     def __init__(self):
         super(FeatureExtractor, self).__init__()
@@ -67,6 +65,14 @@ class NeuroVitisSystem:
         for cluster_id, real_label_id in self.mapping.items():
             u_ordered[real_label_id] += u_raw[cluster_id]
         return u_ordered
+    
+    def _save_to_cloud_task(self, json_data, img_bgr, mask_img):
+        print("Iniciando subida a Supabase...")
+        try:
+            db_logic.guardar_diagnostico(json_data, img_bgr, mask_img)
+            print("Guardado completado con éxito.")
+        except Exception as e:
+            print(f"Falló el guardado: {e}")
 
     def predict(self, image_file):
         # --- PASO 1: CARGA Y VISIÓN (OpenCV) ---       
@@ -77,7 +83,7 @@ class NeuroVitisSystem:
         # --- PASO 2: NORMALIZACIÓN (Dynamic ROI + CLAHE) ---
         roi_procesada = vision_logic.normalizar_hoja(img_rgb)
         
-        # === CORRECCIÓN DE ARQUITECTO: FALLBACK LOGIC ===
+        # -- FALLBACK LOGIC --
         if roi_procesada is not None:
             # Escenario Ideal: Se detectó hoja, usamos el recorte limpio
             roi_final = roi_procesada
@@ -126,6 +132,26 @@ class NeuroVitisSystem:
             _, buffer = cv2.imencode('.jpg', mask_disease)
             mask_base64 = base64.b64encode(buffer).decode('utf-8')
 
+        #Guardar en BD
+        img_bgr_save = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        json_for_db = {
+            "diagnosis": {
+                "disease": winner,
+                "confidence": confidence,
+                "fuzzy_probs": result 
+            },
+            "expert_analysis": {
+                "severity_label": severidad_label,
+                "tissue_damage_percent": ratio,
+                "roi_detected": roi_detected
+            }
+        }
+        thread = threading.Thread(
+            target=self._save_to_cloud_task, 
+            args=(json_for_db, img_bgr_save, mask_disease)
+        )
+        thread.start()
+        
         # JSON FINAL ESTRUCTURADO
         return {
             "status": "success",

@@ -161,25 +161,38 @@ export class AnalyzerComponent implements OnInit {
     this.isChatOpen = !this.isChatOpen;
   }
 
-  sendMessage() {
+sendMessage() {
     if (!this.newMessage.trim()) return;
 
-    // 1. Agregar mensaje usuario
+    // 1. Mostrar mensaje en UI
     this.chatMessages.push({ sender: 'user', text: this.newMessage, time: this.getTime() });
     
-    // 2. Preparar contexto actualizado
-    const context = this.result ? 
-      `Contexto: Diagnóstico ${this.result.diagnosis.disease}, Confianza ${this.result.diagnosis.confidence}%, Severidad: ${this.result.expert_analysis.severity_label}` : 
-      'Contexto: Sin diagnóstico activo';
-    
-    console.log(`Enviando a Agente LLM: "${this.newMessage}" + [${context}]`);
-
-    // 3. Simular respuesta del agente
-    setTimeout(() => {
-      this.addAgentMessage("Entendido. Como modelo de lenguaje (simulado), te recomiendo verificar la humedad del suelo.");
-    }, 1000);
-
+    const msg = this.newMessage;
     this.newMessage = '';
+
+    // 2. PREPARAR EL OBJETO DE CONTEXTO (Limpio, solo datos clave)
+    let contextPayload = {};
+    
+    if (this.result) {
+        contextPayload = {
+            disease: this.result.diagnosis.disease,
+            confidence: this.result.diagnosis.confidence,
+            fuzzy_probs: this.result.diagnosis.fuzzy_probs, 
+            severity: this.result.expert_analysis.severity_label,
+            damage_percent: this.result.expert_analysis.tissue_damage_percent,
+            roi_detected: this.result.expert_analysis.roi_detected
+        };
+    }
+
+    // 3. ENVIAR AL BACKEND
+    this.neuroService.sendMessageToAgent(msg, contextPayload).subscribe({
+      next: (res) => {
+        this.addAgentMessage(res.response);
+      },
+      error: (err) => {
+        this.addAgentMessage("Error conectando con NeuroBot.");
+      }
+    });
   }
 
   private addAgentMessage(text: string) {

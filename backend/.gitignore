@@ -1,3 +1,4 @@
 /neuro-vitis
 /model
 /core/__pycache__
+.env

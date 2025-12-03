@@ -41,6 +41,13 @@ export class NeuroVitisService {
     formData.append('file', imageFile);
     return this.http.post<NeuroResponse>(`${this.API_URL}/predict`, formData);
   }
+
+  sendMessageToAgent(message: string, contextData: any): Observable<any> {
+    return this.http.post(`${this.API_URL}/chat`, { 
+      message: message, 
+      context: contextData 
+    });
+  }
   
   checkHealth(): Observable<any> {
     return this.http.get(`${this.API_URL}/health`);

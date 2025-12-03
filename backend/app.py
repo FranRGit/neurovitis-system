@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from core.ai_logic import NeuroVitisSystem
+from core.agent_logic import neurobot_agente_mensaje
 import os
 from flask_cors import CORS 
 
@@ -36,6 +37,26 @@ def predict():
     except Exception as e:
         return jsonify({"error": f"Error interno: {str(e)}"}), 500
 
+@app.route('/chat', methods=['POST'])
+def chat_agent():
+    data = request.json
+    
+    # Validaciones
+    if not data or 'message' not in data:
+        return jsonify({"error": "Mensaje vacío"}), 400
+    
+    user_message = data['message']
+    
+    # Extraemos el contexto que envía Angular (puede venir vacío si no hay analisis aun)
+    user_context = data.get('context', {}) 
+    
+    # Llamamos al agente pasando ambos datos
+    respuesta = neurobot_agente_mensaje(user_message, user_context)
+    
+    return jsonify({
+        "response": respuesta,
+        "agent": "NeuroBot v1.0"
+    })
+
 if __name__ == '__main__':
-    # Ejecutar en el puerto 5000
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=os.getenv("PORT"), debug=True)
