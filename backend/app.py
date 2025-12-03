@@ -13,8 +13,7 @@ MODELS_PATH = os.path.join(BASE_DIR, 'models')
 neuro_system = None
 
 try:
-    if neuro_system is None:
-        neuro_system = NeuroVitisSystem(MODELS_PATH)
+    neuro_system = NeuroVitisSystem(MODELS_PATH)
 except Exception as e:
     print(f"Advertencia: Modelos no cargados al inicio. {e}")
 

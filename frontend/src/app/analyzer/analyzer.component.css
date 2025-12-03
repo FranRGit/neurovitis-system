@@ -218,3 +218,210 @@ h1 {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 .cyber-select { background: #000; color: #fff; border: 1px solid var(--neon-green); padding: 5px; margin-right: 10px; }
+
+.expert-module {
+    margin-top: 25px;
+    border-top: 1px solid #333;
+    padding-top: 15px;
+}
+
+.expert-module h3 {
+    color: var(--text-main);
+    font-size: 1.1rem;
+    border-left: 3px solid var(--neon-yellow);
+    padding-left: 10px;
+    margin-bottom: 15px;
+}
+
+.severity-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Mitad info, mitad imagen */
+    gap: 15px;
+}
+
+@media (max-width: 1200px) {
+    .severity-grid { grid-template-columns: 1fr; } /* Colapsar en pantallas chicas */
+}
+
+/* Badge de Severidad */
+.severity-badge {
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 5px 10px;
+    border: 1px solid #555;
+    text-align: center;
+    margin-bottom: 15px;
+    background: rgba(0,0,0,0.5);
+}
+
+/* Colores dinámicos para severidad */
+.severity-low { color: var(--neon-green); border-color: var(--neon-green); box-shadow: 0 0 10px rgba(57, 255, 20, 0.2); }
+.severity-mid { color: var(--neon-yellow); border-color: var(--neon-yellow); box-shadow: 0 0 10px rgba(252, 238, 10, 0.2); }
+.severity-high { color: var(--neon-red); border-color: var(--neon-red); box-shadow: 0 0 10px rgba(255, 7, 58, 0.2); }
+
+/* Barra de Daño */
+.mt-2 { margin-top: 10px; display: block;}
+.damage-meter { margin-top: 5px; }
+.damage-value { font-family: var(--font-mono); font-size: 1.5rem; color: #fff; }
+
+.damage-bar-track {
+    height: 6px;
+    background: #222;
+    margin-top: 5px;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.damage-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--neon-green), var(--neon-red));
+    transition: width 1s ease-out;
+}
+
+/* Máscara Visual (La imagen en blanco y negro) */
+.mask-visual {
+    border: 1px solid var(--neon-green);
+    background: #000;
+    padding: 5px;
+    position: relative;
+    text-align: center;
+}
+
+.visual-label {
+    position: absolute;
+    top: -10px;
+    left: 10px;
+    background: var(--bg-dark);
+    padding: 0 5px;
+    font-size: 0.7rem;
+    color: var(--neon-green);
+    border: 1px solid var(--neon-green);
+}
+
+.mask-visual img {
+    width: 100%;
+    height: 150px; /* Altura fija para uniformidad */
+    object-fit: contain;
+    filter: contrast(1.2); /* Aumentar contraste para ver mejor el daño */
+}
+
+/* Alerta ROI */
+.cyber-alert {
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px dashed;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    animation: flashAlert 2s infinite;
+}
+.alert-warning {
+    color: var(--neon-yellow);
+    border-color: var(--neon-yellow);
+    background: rgba(252, 238, 10, 0.05);
+}
+
+.clickable-mask {
+    cursor: zoom-in;
+    transition: transform 0.3s, filter 0.3s;
+}
+
+.clickable-mask:hover {
+    transform: scale(1.02);
+    filter: brightness(1.2);
+}
+
+.zoom-hint {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    color: var(--neon-green);
+    background: rgba(0,0,0,0.7);
+    padding: 2px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+    font-size: 0.8rem;
+}
+
+/* --- ESTILOS DEL MODAL (CYBERPUNK) --- */
+.image-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px); /* Efecto cristal borroso */
+    z-index: 1000; /* Por encima de todo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-modal-content {
+    background: var(--panel-bg);
+    border: 1px solid var(--neon-green);
+    padding: 20px;
+    width: 90%;
+    max-width: 800px; /* Tamaño máximo */
+    max-height: 90vh;
+    position: relative;
+    box-shadow: 0 0 30px rgba(57, 255, 20, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.image-modal-content h3 {
+    color: var(--neon-green);
+    margin-top: 0;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+    font-size: 1.2rem;
+}
+
+.full-image-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: #000;
+    border: 1px dashed #333;
+    margin: 10px 0;
+}
+
+.full-image-container img {
+    max-width: 100%;
+    max-height: 60vh;
+    object-fit: contain;
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: transparent;
+    border: none;
+    color: var(--neon-red);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.close-modal-btn:hover {
+    transform: rotate(90deg) scale(1.2);
+    text-shadow: 0 0 10px var(--neon-red);
+}
+
+.modal-footer {
+    font-size: 0.9rem;
+    color: #aaa;
+    text-align: center;
+}
+
+.white-text {
+    color: #fff;
+    font-weight: bold;
+    text-shadow: 0 0 5px #fff;
+}

@@ -1,20 +1,23 @@
 <div class="neuro-container">
 
+    <!-- HEADER -->
     <header class="cyber-header">
         <h1>NEURO<span class="neon-text">VITIS</span> SYSTEM</h1>
         <div class="status-badge">SYSTEM: ONLINE</div>
     </header>
 
     <div class="main-grid">
-        
+        <!-- PANEL IZQUIERDO: INPUT -->
         <div class="panel left-panel">
         <h2><i class="fas fa-upload"></i> SCAN INPUT</h2>
         
+        <!-- CÁMARA -->
         <div class="camera-container" *ngIf="isCameraOpen">
             <video #videoElement autoplay></video>
             <button class="btn btn-capture" (click)="captureImage()">CAPTURAR</button>
         </div>
 
+        <!-- PREVIEW IMAGEN -->
         <div class="image-preview-box" *ngIf="!isCameraOpen">
             <img *ngIf="imagePreview" [src]="imagePreview" alt="Leaf Preview" class="leaf-img">
             <div *ngIf="!imagePreview" class="placeholder">
@@ -23,98 +26,166 @@
             </div>
         </div>
 
+        <!-- CONTROLES -->
         <div class="controls">
             <input type="file" #fileInput (change)="onFileSelected($event)" hidden accept="image/*">
             <button class="btn btn-outline" (click)="fileInput.click()">SUBIR ARCHIVO</button>
             <button class="btn btn-outline" (click)="toggleCamera()">{{ isCameraOpen ? 'CERRAR CÁMARA' : 'USAR CÁMARA' }}</button>
         </div>
 
+        <!-- BOTÓN DE ANÁLISIS -->
         <button class="btn btn-primary analyze-btn" 
                 (click)="analyzeImage()" 
                 [disabled]="!selectedFile || isLoading">
             {{ isLoading ? 'PROCESANDO...' : 'INICIAR ANÁLISIS NEURONAL' }}
         </button>
-        </div>
+    </div>
 
+        <!-- PANEL DERECHO: RESULTADOS -->
         <div class="panel right-panel">
         <h2><i class="fas fa-chart-bar"></i> DIAGNOSTICS</h2>
 
+        <!-- ESTADO DE ESPERA -->
         <div *ngIf="!result" class="waiting-data">
             <p>ESPERANDO DATOS DEL SENSOR...</p>
         </div>
 
+        <!-- CONTENEDOR DE RESULTADOS -->
         <div *ngIf="result" class="results-container fade-in">
-            <div class="diagnosis-card" [ngClass]="getAlertClass()">
-            <span class="label">CLASE DETECTADA:</span>
-            <h1 class="glitch-text">{{ result.diagnosis | uppercase }}</h1>
-            <div class="confidence-badge">
-                CONFIANZA: {{ result.confidence.toFixed(2) }}%
-            </div>
-            </div>
-
-            <div class="fuzzy-chart">
-            <h3>ANÁLISIS DIFUSO (FUZZY MEMBERSHIP)</h3>
-            <div class="bar-group" *ngFor="let item of getDetailsArray()">
-                <div class="bar-label">
-                <span>{{ item.name }}</span>
-                <span>{{ item.value.toFixed(1) }}%</span>
-                </div>
-                <div class="progress-track">
-                <div class="progress-fill" 
-                    [style.width.%]="item.value"
-                    [style.background-color]="getConfidenceColor(item.value)">
-                </div>
-                </div>
-            </div>
-            </div>
-
-            <div class="feedback-module">
-            <h3>VALIDACIÓN EXPERTA</h3>
             
-            <div *ngIf="feedbackStatus === 'pending'" class="feedback-actions">
-                <button class="btn btn-success" (click)="approveDiagnosis()">
-                <i class="fas fa-check"></i> APROBAR
-                </button>
-                <button class="btn btn-danger" (click)="enableCorrection()">
-                <i class="fas fa-times"></i> CORREGIR
-                </button>
+            <!-- ALERTA ROI (Si no detectó hoja) -->
+            <div *ngIf="!result.expert_analysis.roi_detected" class="cyber-alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>ADVERTENCIA: NO SE DETECTÓ SILUETA. ANÁLISIS DE IMAGEN COMPLETA.</span>
             </div>
 
-            <div *ngIf="showCorrectionDropdown" class="correction-form fade-in">
-                <select [(ngModel)]="selectedCorrection" class="cyber-select">
-                <option value="" disabled selected>Seleccionar diagnóstico real...</option>
-                <option *ngFor="let disease of availableDiseases" [value]="disease">{{ disease }}</option>
-                </select>
-                <button class="btn btn-small" (click)="submitCorrection()">GUARDAR</button>
+            <!-- TARJETA DE DIAGNÓSTICO IA -->
+            <div class="diagnosis-card" [ngClass]="getAlertClass()">
+                <span class="label">CLASE DETECTADA:</span>
+                <!-- Accedemos a result.diagnosis.disease -->
+                <h1 class="glitch-text">{{ result.diagnosis.disease | uppercase }}</h1>
+                <div class="confidence-badge">
+                    CONFIANZA: {{ result.diagnosis.confidence.toFixed(2) }}%
+                </div>
             </div>
 
-            <div *ngIf="feedbackStatus !== 'pending'" class="feedback-done">
-                <p>ESTADO REGISTRADO: <span class="neon-text">{{ feedbackStatus | uppercase }}</span></p>
+            <!-- GRÁFICO FUZZY -->
+            <div class="fuzzy-chart">
+                <h3>ANÁLISIS DIFUSO (FUZZY MEMBERSHIP)</h3>
+                <div class="bar-group" *ngFor="let item of getDetailsArray()">
+                    <div class="bar-label">
+                    <span>{{ item.name }}</span>
+                    <span>{{ item.value.toFixed(1) }}%</span>
+                    </div>
+                    <div class="progress-track">
+                    <div class="progress-fill" 
+                        [style.width.%]="item.value"
+                        [style.background-color]="getConfidenceColor(item.value)">
+                    </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- === NUEVO: MÓDULO EXPERTO (SEVERIDAD Y MÁSCARA) === -->
+            <div class="expert-module fade-in-up">
+                <h3><i class="fas fa-microscope"></i> ANÁLISIS TISULAR (SISTEMA EXPERTO)</h3>
+                
+                <div class="severity-grid">
+                    <!-- Info Severidad -->
+                    <div class="severity-info">
+                        <span class="label">NIVEL DE DAÑO:</span>
+                        <div class="severity-badge" [ngClass]="getSeverityClass(result.expert_analysis.severity_label)">
+                            {{ result.expert_analysis.severity_label | uppercase }}
+                        </div>
+                        
+                        <span class="label mt-2">ÁREA COMPROMETIDA:</span>
+                        <div class="damage-meter">
+                            <span class="damage-value">{{ result.expert_analysis.tissue_damage_percent }}%</span>
+                            <div class="damage-bar-track">
+                                <div class="damage-bar-fill" [style.width.%]="result.expert_analysis.tissue_damage_percent"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Máscara Visual (Imagen Base64) -->
+                    <div class="mask-visual" *ngIf="result.visuals.damage_mask_base64">
+                        <span class="visual-label">MAPA DE DAÑO (SEGMENTACIÓN)</span>
+                            <img [src]="'data:image/jpeg;base64,' + result.visuals.damage_mask_base64" 
+                                alt="Damage Mask"
+                                class="clickable-mask"
+                                (click)="openImageModal()"
+                                title="Click para ampliar">                    
+                    </div>
+                </div>
+            </div>
+
+            <!-- MÓDULO DE FEEDBACK -->
+            <div class="feedback-module">
+                <h3>VALIDACIÓN EXPERTA</h3>
+                
+                <div *ngIf="feedbackStatus === 'pending'" class="feedback-actions">
+                    <button class="btn btn-success" (click)="approveDiagnosis()">
+                    <i class="fas fa-check"></i> APROBAR
+                    </button>
+                    <button class="btn btn-danger" (click)="enableCorrection()">
+                    <i class="fas fa-times"></i> CORREGIR
+                    </button>
+                </div>
+
+                <div *ngIf="showCorrectionDropdown" class="correction-form fade-in">
+                    <select [(ngModel)]="selectedCorrection" class="cyber-select">
+                    <option value="" disabled selected>Seleccionar diagnóstico real...</option>
+                    <option *ngFor="let disease of availableDiseases" [value]="disease">{{ disease }}</option>
+                    </select>
+                    <button class="btn btn-small" (click)="submitCorrection()">GUARDAR</button>
+                </div>
+
+                <div *ngIf="feedbackStatus !== 'pending'" class="feedback-done">
+                    <p>ESTADO REGISTRADO: <span class="neon-text">{{ feedbackStatus | uppercase }}</span></p>
+                </div>
             </div>
 
         </div>
         </div>
     </div>
 
+    <!-- WIDGET DE CHAT -->
     <div class="chat-widget" [class.open]="isChatOpen">
         <div class="chat-header" (click)="toggleChat()">
-        <span><i class="fas fa-robot"></i> AGENTE AGRÓNOMO</span>
-        <i class="fas" [ngClass]="isChatOpen ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
+            <span><i class="fas fa-robot"></i> AGENTE AGRÓNOMO</span>
+            <i class="fas" [ngClass]="isChatOpen ? 'fa-chevron-down' : 'fa-chevron-up'"></i>
         </div>
         
         <div class="chat-body" *ngIf="isChatOpen">
-        <div class="messages">
-            <div class="message" *ngFor="let msg of chatMessages" [ngClass]="msg.sender">
-            <div class="bubble">{{ msg.text }}</div>
-            <span class="time">{{ msg.time }}</span>
+            <div class="messages">
+                <div class="message" *ngFor="let msg of chatMessages" [ngClass]="msg.sender">
+                <div class="bubble">{{ msg.text }}</div>
+                <span class="time">{{ msg.time }}</span>
+                </div>
+            </div>
+            <div class="chat-input">
+                <input [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" placeholder="Consultar al agente...">
+                <button (click)="sendMessage()"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
-        <div class="chat-input">
-            <input [(ngModel)]="newMessage" (keyup.enter)="sendMessage()" placeholder="Consultar al agente...">
-            <button (click)="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<div class="image-modal-overlay fade-in" *ngIf="showImageModal" (click)="closeImageModal()">
+    <div class="image-modal-content" (click)="$event.stopPropagation()">
+        <button class="close-modal-btn" (click)="closeImageModal()">
+            <i class="fas fa-times"></i>
+        </button>
+        
+        <h3><i class="fas fa-microscope"></i> VISTA DETALLADA</h3>
+        
+        <div class="full-image-container">
+            <!-- Usamos safe navigation operator (?) por si acaso -->
+            <img [src]="'data:image/jpeg;base64,' + result?.visuals?.damage_mask_base64" alt="Full Damage Mask">
         </div>
+        
+        <div class="modal-footer">
+            <p>Segmentación de daño tisular (Blanco = Enfermedad)</p>
         </div>
     </div>
-
 </div>

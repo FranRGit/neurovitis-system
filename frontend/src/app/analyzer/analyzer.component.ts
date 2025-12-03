@@ -14,7 +14,7 @@ interface ChatMessage {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './analyzer.component.html',
-  styleUrls: ['./analyzer.component.scss']
+  styleUrls: ['./analyzer.component.css']
 })
 export class AnalyzerComponent implements OnInit {
   // Variables de Estado
@@ -23,7 +23,8 @@ export class AnalyzerComponent implements OnInit {
   result: NeuroResponse | null = null;
   isLoading = false;
   isCameraOpen = false;
-  
+  showImageModal = false;
+
   // Variables de Feedback
   feedbackStatus: 'pending' | 'validated' | 'corrected' = 'pending';
   showCorrectionDropdown = false;
@@ -95,16 +96,27 @@ export class AnalyzerComponent implements OnInit {
 
   private handleFile(file: File) {
     this.selectedFile = file;
-    this.feedbackStatus = 'pending'; // Reset status
+    this.feedbackStatus = 'pending'; 
     this.showCorrectionDropdown = false;
+    this.result = null; 
     
-    // Preview
     const reader = new FileReader();
     reader.onload = (e) => this.imagePreview = e.target?.result as string;
     reader.readAsDataURL(file);
   }
 
-  // --- CONSUMO DE API ---
+  // Métodos para controlar el modal
+  openImageModal() {
+    if (this.result?.visuals?.damage_mask_base64) {
+      this.showImageModal = true;
+    }
+  }
+
+  closeImageModal() {
+    this.showImageModal = false;
+  }
+
+  // CONSUMO DE API 
   analyzeImage(): void {
     if (!this.selectedFile) return;
 
@@ -113,8 +125,10 @@ export class AnalyzerComponent implements OnInit {
       next: (res) => {
         this.result = res;
         this.isLoading = false;
-        // Trigger automático para el chat (Simulado)
-        this.addAgentMessage(`Diagnóstico completado: ${res.diagnosis} (${res.confidence.toFixed(1)}%). ¿Necesitas recomendaciones?`);
+        
+        // Trigger automático para el chat
+        // Actualizado para acceder a res.diagnosis.disease
+        this.addAgentMessage(`Diagnóstico completado: ${res.diagnosis.disease} (${res.diagnosis.confidence.toFixed(1)}%). ¿Necesitas recomendaciones?`);
       },
       error: (err) => {
         console.error(err);
@@ -124,11 +138,10 @@ export class AnalyzerComponent implements OnInit {
     });
   }
 
-  // --- MÓDULO DE FEEDBACK (Cascarón) ---
+  //MÓDULO DE FEEDBACK (Cascarón)
   approveDiagnosis() {
     this.feedbackStatus = 'validated';
     console.log('Enviando a DB: Status VALIDATED');
-    // Aquí iría la llamada a tu servicio de feedback
   }
 
   enableCorrection() {
@@ -140,11 +153,10 @@ export class AnalyzerComponent implements OnInit {
       this.feedbackStatus = 'corrected';
       this.showCorrectionDropdown = false;
       console.log(`Enviando a DB: Status CORRECTED -> ${this.selectedCorrection}`);
-      // Aquí iría la llamada a tu servicio de feedback
     }
   }
 
-  // --- MÓDULO DE CHAT (Cascarón) ---
+  //MÓDULO DE CHAT (Cascarón)
   toggleChat() {
     this.isChatOpen = !this.isChatOpen;
   }
@@ -155,14 +167,14 @@ export class AnalyzerComponent implements OnInit {
     // 1. Agregar mensaje usuario
     this.chatMessages.push({ sender: 'user', text: this.newMessage, time: this.getTime() });
     
-    // 2. Preparar contexto para enviar (Cascarón)
+    // 2. Preparar contexto actualizado
     const context = this.result ? 
-      `Contexto: Diagnóstico ${this.result.diagnosis}, Confianza ${this.result.confidence}%` : 
+      `Contexto: Diagnóstico ${this.result.diagnosis.disease}, Confianza ${this.result.diagnosis.confidence}%, Severidad: ${this.result.expert_analysis.severity_label}` : 
       'Contexto: Sin diagnóstico activo';
     
     console.log(`Enviando a Agente LLM: "${this.newMessage}" + [${context}]`);
 
-    // 3. Simular respuesta del agente (Aquí consumirías tu API de Chat)
+    // 3. Simular respuesta del agente
     setTimeout(() => {
       this.addAgentMessage("Entendido. Como modelo de lenguaje (simulado), te recomiendo verificar la humedad del suelo.");
     }, 1000);
@@ -178,7 +190,7 @@ export class AnalyzerComponent implements OnInit {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // Helpers para la vista
+  // --- HELPERS PARA LA VISTA ---
   getConfidenceColor(value: number): string {
     if (value > 80) return 'var(--neon-red)';     // Peligro/Certeza Alta (Enfermedad)
     if (value < 50) return 'var(--neon-yellow)';  // Incertidumbre
@@ -187,18 +199,32 @@ export class AnalyzerComponent implements OnInit {
   
   getAlertClass(): string {
     if (!this.result) return '';
+    const diagnosis = this.result.diagnosis;
     // Si es Healthy y alta confianza -> Verde
-    if (this.result.diagnosis === 'Healthy' && this.result.confidence > 80) return 'alert-safe';
+    if (diagnosis.disease === 'Healthy' && diagnosis.confidence > 80) return 'alert-safe';
     // Si es Enfermedad y alta confianza -> Rojo
-    if (this.result.confidence > 80) return 'alert-danger';
+    if (diagnosis.confidence > 80) return 'alert-danger';
     // Si es baja confianza -> Amarillo
-    if (this.result.confidence < 50) return 'alert-warning';
+    if (diagnosis.confidence < 50) return 'alert-warning';
+    
     return 'alert-normal';
   }
   
-  // Convierte objeto details a array para iterar en HTML
+  // Convierte el diccionario fuzzy_probs a array para iterar en HTML
   getDetailsArray() {
     if (!this.result) return [];
-    return Object.entries(this.result.details).map(([key, value]) => ({ name: key, value }));
+    return Object.entries(this.result.diagnosis.fuzzy_probs).map(([key, value]) => ({ name: key, value }));
+  }
+
+  // --- NUEVO: Helper para Severidad ---
+  getSeverityClass(label: string): string {
+    if (!label) return '';
+    const l = label.toLowerCase();
+    
+    if (l.includes('severo') || l.includes('crítico')) return 'severity-high';
+    if (l.includes('moderado')) return 'severity-mid';
+    if (l.includes('leve') || l.includes('sana') || l.includes('incierto')) return 'severity-low';
+    
+    return '';
   }
 }
