@@ -2,8 +2,10 @@ from flask import Flask, request, jsonify
 from core.ai_logic import NeuroVitisSystem
 import os
 from flask_cors import CORS 
+
 app = Flask(__name__)
 CORS(app)
+
 # Configuración
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_PATH = os.path.join(BASE_DIR, 'models')
@@ -34,10 +36,6 @@ def predict():
     
     except Exception as e:
         return jsonify({"error": f"Error interno: {str(e)}"}), 500
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({"status": "online", "system": "NeuroVitis Hybrid"}), 200
 
 if __name__ == '__main__':
     # Ejecutar en el puerto 5000
