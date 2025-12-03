@@ -84,19 +84,18 @@ class NeuroVitisSystem:
         roi_procesada = vision_logic.normalizar_hoja(img_rgb)
         
         # -- FALLBACK LOGIC --
-        if roi_procesada is not None:
-            # Escenario Ideal: Se detectó hoja, usamos el recorte limpio
-            roi_final = roi_procesada
-            roi_detected = True
-        else:
-            # Escenario Fallido: No se detectó hoja (pared, oscuridad)
-            # En vez de crashear, usamos la imagen original redimensionada
-            print("Advertencia: No se detectó ROI. Usando imagen completa.")
-            roi_final = cv2.resize(img_rgb, (224, 224))
-            roi_detected = False
-
+        if roi_procesada is None:
+            print("Advertencia: No se detectó hoja. Deteniendo proceso.")
+            return {
+                "status": "error",
+                "code": "NO_ROI_DETECTED",
+                "message": "No se detectó ninguna hoja clara. Por favor, centre la hoja, mejore la iluminación y evite fondos ruidosos."
+            }
+        
         # --- PASO 3: SISTEMA EXPERTO (Severidad) ---
         # Analiza el daño sobre la imagen final (sea recorte o fallback)
+        roi_final = roi_procesada
+        roi_detected = True
         ratio, severidad_label, mask_disease = expert_system.sistema_experto_severidad(roi_final)
         
         # --- PASO 4: PUENTE NUMPY -> PIL -> TENSOR (Para PyTorch) ---

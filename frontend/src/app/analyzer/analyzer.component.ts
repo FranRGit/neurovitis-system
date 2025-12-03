@@ -24,6 +24,9 @@ export class AnalyzerComponent implements OnInit {
   isLoading = false;
   isCameraOpen = false;
   showImageModal = false;
+  
+  // NUEVA VARIABLE: Para manejar mensajes de error en la UI
+  errorMessage: string | null = null;
 
   // Variables de Feedback
   feedbackStatus: 'pending' | 'validated' | 'corrected' = 'pending';
@@ -100,6 +103,9 @@ export class AnalyzerComponent implements OnInit {
     this.showCorrectionDropdown = false;
     this.result = null; 
     
+    // IMPORTANTE: Limpiar errores previos al cargar nueva imagen
+    this.errorMessage = null;
+    
     const reader = new FileReader();
     reader.onload = (e) => this.imagePreview = e.target?.result as string;
     reader.readAsDataURL(file);
@@ -121,19 +127,31 @@ export class AnalyzerComponent implements OnInit {
     if (!this.selectedFile) return;
 
     this.isLoading = true;
+    this.errorMessage = null; // Resetear mensaje de error
+    this.result = null;       // Resetear resultado anterior
+
     this.neuroService.predict(this.selectedFile).subscribe({
       next: (res) => {
-        this.result = res;
         this.isLoading = false;
+
+        if (res.status === 'error') {
+            this.errorMessage = res.message || 'Error desconocido al procesar la imagen.';
+            this.addAgentMessage(`${this.errorMessage}`); // El bot también avisa
+            return; // Detenemos aquí, no mostramos resultados
+        }
+
+        this.result = res;
         
-        // Trigger automático para el chat
-        // Actualizado para acceder a res.diagnosis.disease
-        this.addAgentMessage(`Diagnóstico completado: ${res.diagnosis.disease} (${res.diagnosis.confidence.toFixed(1)}%). ¿Necesitas recomendaciones?`);
+        if (res.diagnosis) {
+            this.addAgentMessage(`Diagnóstico completado: ${res.diagnosis.disease} (${res.diagnosis.confidence.toFixed(1)}%). ¿Necesitas recomendaciones?`);
+        }
       },
       error: (err) => {
         console.error(err);
-        alert('Error conectando con el servidor neuronal');
         this.isLoading = false;
+        // Manejo de error de red (HTTP 500, 404, offline)
+        this.errorMessage = 'Error de conexión con el servidor neuronal. Verifica que el backend esté activo.';
+        this.addAgentMessage('Error de conexión con el servidor.');
       }
     });
   }
@@ -161,7 +179,7 @@ export class AnalyzerComponent implements OnInit {
     this.isChatOpen = !this.isChatOpen;
   }
 
-sendMessage() {
+  sendMessage() {
     if (!this.newMessage.trim()) return;
 
     // 1. Mostrar mensaje en UI
@@ -173,7 +191,8 @@ sendMessage() {
     // 2. PREPARAR EL OBJETO DE CONTEXTO (Limpio, solo datos clave)
     let contextPayload = {};
     
-    if (this.result) {
+    // Verificamos que tengamos un diagnóstico completo antes de enviarlo
+    if (this.result && this.result.diagnosis && this.result.expert_analysis) {
         contextPayload = {
             disease: this.result.diagnosis.disease,
             confidence: this.result.diagnosis.confidence,
@@ -187,7 +206,9 @@ sendMessage() {
     // 3. ENVIAR AL BACKEND
     this.neuroService.sendMessageToAgent(msg, contextPayload).subscribe({
       next: (res) => {
-        this.addAgentMessage(res.response);
+        if (res && res.response) {
+            this.addAgentMessage(res.response);
+        }
       },
       error: (err) => {
         this.addAgentMessage("Error conectando con NeuroBot.");
@@ -211,7 +232,8 @@ sendMessage() {
   }
   
   getAlertClass(): string {
-    if (!this.result) return '';
+    if (!this.result || !this.result.diagnosis) return '';
+    
     const diagnosis = this.result.diagnosis;
     // Si es Healthy y alta confianza -> Verde
     if (diagnosis.disease === 'Healthy' && diagnosis.confidence > 80) return 'alert-safe';
@@ -225,7 +247,7 @@ sendMessage() {
   
   // Convierte el diccionario fuzzy_probs a array para iterar en HTML
   getDetailsArray() {
-    if (!this.result) return [];
+    if (!this.result || !this.result.diagnosis) return [];
     return Object.entries(this.result.diagnosis.fuzzy_probs).map(([key, value]) => ({ name: key, value }));
   }
 

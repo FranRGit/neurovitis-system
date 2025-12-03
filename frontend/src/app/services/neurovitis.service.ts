@@ -21,11 +21,16 @@ export interface Visuals {
 }
 
 export interface NeuroResponse {
-  status: string;
-  diagnosis: Diagnosis;
-  expert_analysis: ExpertAnalysis;
-  visuals: Visuals;
+  status: 'success' | 'error'; // Campo clave
+  message?: string;            // Opcional, solo viene si hay error
+  code?: string;               // Código de error
+  
+  // Estos ahora son opcionales (?) porque si hay error, no vendrán
+  diagnosis?: Diagnosis;
+  expert_analysis?: ExpertAnalysis;
+  visuals?: Visuals;
 }
+
 
 @Injectable({
   providedIn: 'root'
